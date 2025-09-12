@@ -95,7 +95,7 @@ func TestContentOperations(t *testing.T) {
 		assert.Equal(t, req.Name, content.Name)
 		assert.Equal(t, req.Description, content.Description)
 		assert.Equal(t, req.DocumentType, content.DocumentType)
-		assert.Equal(t, simplecontent.ContentStatusCreated, content.Status)
+        assert.Equal(t, string(simplecontent.ContentStatusCreated), content.Status)
 		assert.False(t, content.CreatedAt.IsZero())
 		assert.False(t, content.UpdatedAt.IsZero())
 	})
@@ -281,7 +281,7 @@ func TestObjectOperations(t *testing.T) {
 		assert.Equal(t, content.ID, object.ContentID)
 		assert.Equal(t, "memory", object.StorageBackendName)
 		assert.Equal(t, 1, object.Version)
-		assert.Equal(t, simplecontent.ObjectStatusCreated, object.Status)
+        assert.Equal(t, string(simplecontent.ObjectStatusCreated), object.Status)
 		assert.NotEmpty(t, object.ObjectKey)
 	})
 
@@ -353,7 +353,7 @@ func TestObjectUploadDownload(t *testing.T) {
 		// Verify object status was updated
 		updated, err := svc.GetObject(ctx, object.ID)
 		assert.NoError(t, err)
-		assert.Equal(t, simplecontent.ObjectStatusUploaded, updated.Status)
+        assert.Equal(t, string(simplecontent.ObjectStatusUploaded), updated.Status)
 	})
 
 	t.Run("DownloadObject", func(t *testing.T) {
@@ -442,42 +442,42 @@ func TestDerivedContent(t *testing.T) {
 	parent, err := svc.CreateContent(ctx, parentReq)
 	require.NoError(t, err)
 
-	t.Run("CreateDerivedContent", func(t *testing.T) {
-		derivedReq := simplecontent.CreateDerivedContentRequest{
-			ParentID:       parent.ID,
-			OwnerID:        parent.OwnerID,
-			TenantID:       parent.TenantID,
-			Category:       "thumbnail",
-			DerivationType: "THUMBNAIL_256",
-			Metadata: map[string]interface{}{
-				"width":  256,
-				"height": 256,
-				"format": "jpeg",
-			},
-		}
+    t.Run("CreateDerivedContent", func(t *testing.T) {
+        derivedReq := simplecontent.CreateDerivedContentRequest{
+            ParentID:       parent.ID,
+            OwnerID:        parent.OwnerID,
+            TenantID:       parent.TenantID,
+            DerivationType: "thumbnail",
+            Variant:        "thumbnail_256",
+            Metadata: map[string]interface{}{
+                "width":  256,
+                "height": 256,
+                "format": "jpeg",
+            },
+        }
 
-		derived, err := svc.CreateDerivedContent(ctx, derivedReq)
-		assert.NoError(t, err)
-		assert.NotNil(t, derived)
-		assert.Equal(t, parent.OwnerID, derived.OwnerID)
-		assert.Equal(t, parent.TenantID, derived.TenantID)
-		assert.Equal(t, "thumbnail", derived.DerivationType)
-		assert.Equal(t, simplecontent.ContentStatusCreated, derived.Status)
-	})
+        derived, err := svc.CreateDerivedContent(ctx, derivedReq)
+        assert.NoError(t, err)
+        assert.NotNil(t, derived)
+        assert.Equal(t, parent.OwnerID, derived.OwnerID)
+        assert.Equal(t, parent.TenantID, derived.TenantID)
+        assert.Equal(t, "thumbnail", derived.DerivationType)
+        assert.Equal(t, string(simplecontent.ContentStatusCreated), derived.Status)
+    })
 
-	t.Run("CreateDerivedContentWithInvalidParent", func(t *testing.T) {
-		derivedReq := simplecontent.CreateDerivedContentRequest{
-			ParentID:       uuid.New(), // Non-existent parent
-			OwnerID:        uuid.New(),
-			TenantID:       uuid.New(),
-			Category:       "thumbnail",
-			DerivationType: "THUMBNAIL_256",
-		}
+    t.Run("CreateDerivedContentWithInvalidParent", func(t *testing.T) {
+        derivedReq := simplecontent.CreateDerivedContentRequest{
+            ParentID:       uuid.New(), // Non-existent parent
+            OwnerID:        uuid.New(),
+            TenantID:       uuid.New(),
+            DerivationType: "thumbnail",
+            Variant:        "thumbnail_256",
+        }
 
-		derived, err := svc.CreateDerivedContent(ctx, derivedReq)
-		assert.Error(t, err)
-		assert.Nil(t, derived)
-	})
+        derived, err := svc.CreateDerivedContent(ctx, derivedReq)
+        assert.Error(t, err)
+        assert.Nil(t, derived)
+    })
 }
 
 // Benchmark tests

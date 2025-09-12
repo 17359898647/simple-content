@@ -1,12 +1,12 @@
 package simplecontent
 
 import (
-	"context"
-	"fmt"
-	"io"
-	"time"
+    "context"
+    "fmt"
+    "io"
+    "time"
 
-	"github.com/google/uuid"
+    "github.com/google/uuid"
 )
 
 // service implements the Service interface
@@ -79,8 +79,8 @@ func (s *service) CreateContent(ctx context.Context, req CreateContentRequest) (
 		Name:           req.Name,
 		Description:    req.Description,
 		DocumentType:   req.DocumentType,
-		DerivationType: req.DerivationType,
-		Status:         ContentStatusCreated,
+        DerivationType: req.DerivationType,
+        Status:         string(ContentStatusCreated),
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
@@ -105,23 +105,28 @@ func (s *service) CreateContent(ctx context.Context, req CreateContentRequest) (
 }
 
 func (s *service) CreateDerivedContent(ctx context.Context, req CreateDerivedContentRequest) (*Content, error) {
-	// Verify parent content exists
-	_, err := s.repository.GetContent(ctx, req.ParentID)
-	if err != nil {
-		return nil, fmt.Errorf("parent content not found: %w", err)
-	}
+    // Verify parent content exists
+    _, err := s.repository.GetContent(ctx, req.ParentID)
+    if err != nil {
+        return nil, fmt.Errorf("parent content not found: %w", err)
+    }
 
-	// Create derived content
-	now := time.Now().UTC()
-	content := &Content{
-		ID:             uuid.New(),
-		TenantID:       req.TenantID,
-		OwnerID:        req.OwnerID,
-		Status:         ContentStatusCreated,
-		DerivationType: req.Category,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-	}
+    // Infer derivation_type from variant if missing
+    if req.DerivationType == "" && req.Variant != "" {
+        req.DerivationType = DerivationTypeFromVariant(req.Variant)
+    }
+
+    // Create derived content
+    now := time.Now().UTC()
+    content := &Content{
+        ID:             uuid.New(),
+        TenantID:       req.TenantID,
+        OwnerID:        req.OwnerID,
+        Status:         string(ContentStatusCreated),
+        DerivationType: NormalizeDerivationType(req.DerivationType),
+        CreatedAt:      now,
+        UpdatedAt:      now,
+    }
 
 	if err := s.repository.CreateContent(ctx, content); err != nil {
 		return nil, &ContentError{
@@ -144,14 +149,20 @@ func (s *service) CreateDerivedContent(ctx context.Context, req CreateDerivedCon
 		}
 	}
 
-	// Create derived content relationship
-	_, err = s.repository.CreateDerivedContentRelationship(ctx, CreateDerivedContentParams{
-		ParentID:           req.ParentID,
-		DerivedContentID:   content.ID,
-		DerivationType:     req.DerivationType,
-		DerivationParams:   req.Metadata,
-		ProcessingMetadata: nil,
-	})
+    // Create derived content relationship
+    // Determine variant to persist in relationship
+    variant := req.Variant
+    if variant == "" {
+        variant = req.DerivationType
+    }
+
+    _, err = s.repository.CreateDerivedContentRelationship(ctx, CreateDerivedContentParams{
+        ParentID:           req.ParentID,
+        DerivedContentID:   content.ID,
+        DerivationType:     string(NormalizeVariant(variant)),
+        DerivationParams:   req.Metadata,
+        ProcessingMetadata: nil,
+    })
 	if err != nil {
 		return nil, fmt.Errorf("failed to create derived content relationship: %w", err)
 	}
@@ -300,16 +311,16 @@ func (s *service) CreateObject(ctx context.Context, req CreateObjectRequest) (*O
 		objectKey = s.generateObjectKey(req.ContentID, objectID, contentMetadata)
 	}
 
-	object := &Object{
-		ID:                 objectID,
-		ContentID:          req.ContentID,
-		StorageBackendName: req.StorageBackendName,
-		ObjectKey:          objectKey,
-		Version:            req.Version,
-		Status:             ObjectStatusCreated,
-		CreatedAt:          now,
-		UpdatedAt:          now,
-	}
+    object := &Object{
+        ID:                 objectID,
+        ContentID:          req.ContentID,
+        StorageBackendName: req.StorageBackendName,
+        ObjectKey:          objectKey,
+        Version:            req.Version,
+        Status:             string(ObjectStatusCreated),
+        CreatedAt:          now,
+        UpdatedAt:          now,
+    }
 
 	// Add metadata-derived fields if available
 	if contentMetadata != nil {
@@ -649,7 +660,7 @@ func (s *service) UpdateObjectMetaFromStorage(ctx context.Context, objectID uuid
 	}
 
 	// Update object status
-	object.Status = ObjectStatusUploaded
+    object.Status = string(ObjectStatusUploaded)
 	object.UpdatedAt = updatedTime
 	if err := s.repository.UpdateObject(ctx, object); err != nil {
 		return nil, &ObjectError{ObjectID: objectID, Op: "update_meta_from_storage", Err: err}
@@ -665,11 +676,11 @@ func (s *service) RegisterBackend(name string, backend BlobStore) {
 }
 
 func (s *service) GetBackend(name string) (BlobStore, error) {
-	backend, exists := s.blobStores[name]
-	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrStorageBackendNotFound, name)
-	}
-	return backend, nil
+    backend, exists := s.blobStores[name]
+    if !exists {
+        return nil, fmt.Errorf("%w: %s", ErrStorageBackendNotFound, name)
+    }
+    return backend, nil
 }
 
 // Helper methods
@@ -682,6 +693,18 @@ func (s *service) generateObjectKey(contentID, objectID uuid.UUID, contentMetada
 }
 
 func (s *service) updateObjectFromStorage(ctx context.Context, objectID uuid.UUID) error {
-	_, err := s.UpdateObjectMetaFromStorage(ctx, objectID)
-	return err
+    _, err := s.UpdateObjectMetaFromStorage(ctx, objectID)
+    return err
+}
+
+// Derived content helpers
+func (s *service) GetDerivedRelationshipByContentID(ctx context.Context, contentID uuid.UUID) (*DerivedContent, error) {
+    return s.repository.GetDerivedRelationshipByContentID(ctx, contentID)
+}
+
+func (s *service) ListDerivedByParent(ctx context.Context, parentID uuid.UUID) ([]*DerivedContent, error) {
+    params := ListDerivedContentParams{
+        ParentID: &parentID,
+    }
+    return s.repository.ListDerivedContent(ctx, params)
 }

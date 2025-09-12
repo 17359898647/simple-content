@@ -127,6 +127,39 @@ svc, err := simplecontent.New(
 - **Preview generation**: Extensible preview system
 - **Error handling**: Typed errors for better error handling
 
+## Metadata Strategy
+
+The library uses a hybrid metadata approach:
+
+- First-class fields capture common, structured attributes directly on domain types (e.g., `Content.Name`, `Content.Description`, `Object.ObjectType`, `ContentMetadata.FileName`, `ContentMetadata.MimeType`). These fields are authoritative for their respective values.
+- Flexible JSON maps (`ContentMetadata.Metadata`, `ObjectMetadata.Metadata`) accommodate extensible, application-specific attributes. Prefer namespaced keys as needed to avoid collisions.
+- Avoid duplicating authoritative values in the JSON map. If mirroring is desired for compatibility, treat first-class fields as the source of truth and ensure the JSON copy is consistent.
+- Standard keys when present in metadata JSON: `mime_type`, `file_name`, `file_size`, `etag`, plus additional backend-provided attributes. Applications can add custom keys (e.g., `category`, `priority`).
+
+## Derived Content Typing
+
+- Derivation type (user-facing): stored on derived `Content.DerivationType` (e.g., `thumbnail`, `preview`, `transcode`). Omitted for originals.
+- Variant (specific): stored on the `content_derived` relationship (DB column `variant`), e.g., `thumbnail_256`, `thumbnail_720`, `conversion`.
+- All keyword values use lowercase to minimize typos and normalization overhead. If only `variant` is provided when creating derived content, the service infers `derivation_type` from the variant prefix.
+
+### Typed constants
+
+For clarity and IDE hints, typed string constants are provided:
+
+- Content statuses: `simplecontent.ContentStatus` with constants like `ContentStatusCreated`.
+- Object statuses: `simplecontent.ObjectStatus` with constants like `ObjectStatusUploaded`.
+- Derivation:
+  - Variant: `simplecontent.DerivationVariant` (e.g., `VariantThumbnail256`).
+
+Struct fields remain `string` for compatibility. You can extend by declaring your own typed constants:
+
+```go
+const VariantThumbnail1024 simplecontent.DerivationVariant = "thumbnail_1024"
+```
+
+
+
+
 ## Use Cases
 
 - Document management systems

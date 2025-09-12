@@ -14,14 +14,20 @@ type CreateContentRequest struct {
 	DerivationType string
 }
 
-// CreateDerivedContentRequest contains parameters for creating derived content
+// CreateDerivedContentRequest contains parameters for creating derived content.
+//
+// DerivationType is the user-facing derivation type stored on the derived
+// Content (e.g., "thumbnail", "preview", "transcode").
+// Variant is the specific derivation (e.g., "thumbnail_256"). If Variant is
+// provided and DerivationType is empty, the service infers DerivationType from
+// the prefix before the first underscore in Variant.
 type CreateDerivedContentRequest struct {
-	ParentID       uuid.UUID
-	OwnerID        uuid.UUID
-	TenantID       uuid.UUID
-	Category       string
-	DerivationType string
-	Metadata       map[string]interface{}
+    ParentID       uuid.UUID
+    OwnerID        uuid.UUID
+    TenantID       uuid.UUID
+    DerivationType string
+    Variant        string
+    Metadata       map[string]interface{}
 }
 
 // UpdateContentRequest contains parameters for updating content

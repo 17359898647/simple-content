@@ -1,59 +1,75 @@
 package simplecontent
 
 import (
-	"time"
+    "time"
 
-	"github.com/google/uuid"
+    "github.com/google/uuid"
 )
 
-// Content status constants
+// ContentStatus is the domain type for content lifecycle states.
+type ContentStatus string
+
+// Content status constants (typed).
 const (
-	ContentStatusCreated  = "created"
-	ContentStatusUploaded = "uploaded"
+    ContentStatusCreated  ContentStatus = "created"
+    ContentStatusUploaded ContentStatus = "uploaded"
+    ContentStatusDeleted  ContentStatus = "deleted"
 )
 
 // Content derivation type constants
 const (
-	ContentDerivationTypeOriginal = "original"
-	ContentDerivationTypeDerived  = "derived"
+    ContentDerivationTypeOriginal = "original"
+    ContentDerivationTypeDerived  = "derived"
 )
 
-// Content derived derivation type constants
+// DerivationVariant is the specific variant within a category (e.g., "thumbnail_256").
+type DerivationVariant string
+
+// Derivation variant constants (typed).
 const (
-	ContentDerivedTHUMBNAIL720 = "THUMBNAIL_720"
-	ContentDerivedTHUMBNAIL480 = "THUMBNAIL_480"
-	ContentDerivedTHUMBNAIL256 = "THUMBNAIL_256"
-	ContentDerivedTHUMBNAIL128 = "THUMBNAIL_128"
-	ContentDerivedConversion   = "CONVERSION"
+    VariantThumbnail720 DerivationVariant = "thumbnail_720"
+    VariantThumbnail480 DerivationVariant = "thumbnail_480"
+    VariantThumbnail256 DerivationVariant = "thumbnail_256"
+    VariantThumbnail128 DerivationVariant = "thumbnail_128"
+    VariantConversion   DerivationVariant = "conversion"
 )
 
-// Object status constants
+// ObjectStatus is the domain type for object lifecycle states.
+type ObjectStatus string
+
+// Object status constants (typed).
 const (
-	ObjectStatusCreated    = "created"
-	ObjectStatusUploading  = "uploading"
-	ObjectStatusUploaded   = "uploaded"
-	ObjectStatusProcessing = "processing"
-	ObjectStatusProcessed  = "processed"
-	ObjectStatusFailed     = "failed"
-	ObjectStatusDeleted    = "deleted"
+    ObjectStatusCreated    ObjectStatus = "created"
+    ObjectStatusUploading  ObjectStatus = "uploading"
+    ObjectStatusUploaded   ObjectStatus = "uploaded"
+    ObjectStatusProcessing ObjectStatus = "processing"
+    ObjectStatusProcessed  ObjectStatus = "processed"
+    ObjectStatusFailed     ObjectStatus = "failed"
+    ObjectStatusDeleted    ObjectStatus = "deleted"
 )
 
-// Content represents a logical content entity
+// Content represents a logical content entity.
+//
+// For derived content, the DerivationType field holds the user-facing
+// derivation type (e.g., "thumbnail", "preview"). Specific variant (e.g.,
+// "thumbnail_256") is tracked in the derived-content relationship.
 type Content struct {
-	ID             uuid.UUID `json:"id"`
-	TenantID       uuid.UUID `json:"tenant_id"`
-	OwnerID        uuid.UUID `json:"owner_id"`
-	OwnerType      string    `json:"owner_type,omitempty"`
-	Name           string    `json:"name,omitempty"`
-	Description    string    `json:"description,omitempty"`
-	DocumentType   string    `json:"document_type,omitempty"`
-	Status         string    `json:"status"`
-	DerivationType string    `json:"derivation_type,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+    ID             uuid.UUID `json:"id"`
+    TenantID       uuid.UUID `json:"tenant_id"`
+    OwnerID        uuid.UUID `json:"owner_id"`
+    OwnerType      string    `json:"owner_type,omitempty"`
+    Name           string    `json:"name,omitempty"`
+    Description    string    `json:"description,omitempty"`
+    DocumentType   string    `json:"document_type,omitempty"`
+    Status         string    `json:"status"`
+    DerivationType string    `json:"derivation_type,omitempty"`
+    CreatedAt      time.Time `json:"created_at"`
+    UpdatedAt      time.Time `json:"updated_at"`
+    DeletedAt      *time.Time `json:"deleted_at,omitempty"`
 }
 
-// DerivedContent represents content derived from a parent content
+// DerivedContent represents content derived from a parent content.
+// DerivationType here represents the specific variant (e.g., "thumbnail_256").
 type DerivedContent struct {
 	ParentID           uuid.UUID              `json:"parent_id"`
 	ContentID          uuid.UUID              `json:"content_id"`
@@ -82,17 +98,18 @@ type ContentMetadata struct {
 
 // Object represents a physical object stored in a storage backend
 type Object struct {
-	ID                 uuid.UUID `json:"id"`
-	ContentID          uuid.UUID `json:"content_id"`
-	StorageBackendName string    `json:"storage_backend_name"`
-	StorageClass       string    `json:"storage_class,omitempty"`
-	ObjectKey          string    `json:"object_key"`
-	FileName           string    `json:"file_name,omitempty"`
-	Version            int       `json:"version"`
-	ObjectType         string    `json:"object_type,omitempty"`
-	Status             string    `json:"status"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+    ID                 uuid.UUID `json:"id"`
+    ContentID          uuid.UUID `json:"content_id"`
+    StorageBackendName string    `json:"storage_backend_name"`
+    StorageClass       string    `json:"storage_class,omitempty"`
+    ObjectKey          string    `json:"object_key"`
+    FileName           string    `json:"file_name,omitempty"`
+    Version            int       `json:"version"`
+    ObjectType         string    `json:"object_type,omitempty"`
+    Status             string    `json:"status"`
+    CreatedAt          time.Time `json:"created_at"`
+    UpdatedAt          time.Time `json:"updated_at"`
+    DeletedAt          *time.Time `json:"deleted_at,omitempty"`
 }
 
 // ObjectMetadata represents metadata about an object
