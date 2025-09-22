@@ -20,8 +20,12 @@ This document outlines how to migrate from the legacy packages (pkg/service, pkg
 - Go 1.24+
 - Postgres 13+ (recommended); MinIO/AWS if using s3 storage
 - Ability to run goose migrations for greenfield DBs; for existing DBs, apply the manual SQL below
+- Target database schema (default: `content`) created ahead of goose migrations; see `migrations/manual/000_create_schema.sql`.
+- Database connections that run migrations should set the `search_path` to the target schema (e.g., append `?search_path=content` to the connection string) instead of relying on the SQL migrations to change it.
 
 ## Database Alignment (manual)
+
+For greenfield databases, create the application schema (or run `migrations/manual/000_create_schema.sql`) before executing goose migrations.
 
 For existing databases, apply the following SQL in the target schema (default: content). Adjust schema qualifiers as needed.
 
@@ -45,8 +49,6 @@ ALTER TABLE content.object
 ALTER TABLE content.content_derived
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
 
-ALTER TABLE content.object_preview
-  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
 ```
 
 3) Indexes (optional but recommended)
@@ -204,4 +206,3 @@ Error mapping is consistent and typed (not_found, invalid_status, storage_error,
   - Not enforced by design; if a single canonical record is desired, select by status/time in service
 - OpenAPI
   - Consider adding an OpenAPI spec for the configured server to aid clients
-
